@@ -6,17 +6,38 @@
     <title>Simulasi Diffie–Hellman (Minimal)</title>
     <style>
       :root { --gap: 16px; --border: #d0d7de; }
+      /* Theme colors aligned with GoL palette */
+      :root {
+        --accent-50: #eef2ff; /* indigo-50 */
+        --accent-200: #c7d2fe; /* indigo-200 */
+        --accent-600: #4f46e5; /* indigo-600 */
+        --ally-50: #ecfdf5; /* emerald-50 */
+        --ally-200: #a7f3d0; /* emerald-200 */
+        --ally-600: #059669; /* emerald-600 */
+        --enemy-50: #fee2e2; /* rose-50 */
+        --enemy-200: #fecaca; /* rose-200 */
+        --enemy-600: #dc2626; /* rose-600 */
+      }
       * { box-sizing: border-box; }
-      body { margin: 0; padding: var(--gap); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.45; }
+  body { margin: 0; padding: clamp(16px, 5vw, 48px); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.45; }
       h1 { font-size: 1.25rem; margin: 0 0 8px; }
       h2 { font-size: 1rem; margin: 0 0 8px; }
       small, .muted { color: #666; }
-      .container { display: grid; grid-template-columns: 320px 1fr; gap: var(--gap); align-items: start; }
+  .container { display: grid; grid-template-columns: 320px 1fr; gap: var(--gap); align-items: start; }
+  .page { max-width: 1100px; margin: 0 auto; display: grid; gap: 12px; }
       .panel { border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: #fff; }
+  /* prettier cards and clearer hierarchy */
+  .panel { background: rgba(255,255,255,0.92); box-shadow: 0 4px 16px rgba(0,0,0,0.06); backdrop-filter: blur(4px) saturate(1.02); }
+  .panel h2 { font-size: 1.05rem; font-weight: 700; letter-spacing: .2px; }
+  .panel .section { background: #fafbfc; }
       label { display: block; font-size: .9rem; margin: 10px 0 4px; }
       input[type="text"] { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
       .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-      .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .btn-group { display: grid; gap: 6px; margin-top: 8px; }
+  .group-title { font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #444; opacity: .9; }
+  .btns--ops button { background: #f6f8fa; }
+  .btns--play button { background: #eef2ff; border-color: #c7d2fe; }
       button { padding: 8px 10px; border: 1px solid var(--border); background: #f6f8fa; border-radius: 6px; cursor: pointer; }
       button:disabled { opacity: .6; cursor: not-allowed; }
       .kv { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: .95rem; }
@@ -27,14 +48,41 @@
       .sep { height: 1px; background: var(--border); margin: 10px 0; }
       .flex { display: flex; align-items: center; gap: 8px; }
       .righthead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-      .pill { font-size: .75rem; padding: 2px 6px; border: 1px solid var(--border); border-radius: 999px; background: #fff; }
+  .pill { font-size: .75rem; padding: 2px 8px; border: 1px solid var(--accent-200); border-radius: 999px; background: var(--accent-50); color: var(--accent-600); font-weight: 600; }
       @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+
+      /* Conway's Game of Life background canvas */
+      canvas.life-bg { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; }
+      /* Lift content above canvas without affecting layout */
+      body > :not(canvas.life-bg):not(style):not(link):not(script) { position: relative; z-index: 1; }
+
+      /* Make top texts readable over GoL */
+      .page > h1,
+      .page > .muted { 
+        display: inline-block; 
+        background: rgba(255,255,255,0.88); 
+        -webkit-backdrop-filter: blur(2px); 
+        backdrop-filter: blur(2px);
+        border: 1px solid var(--border); 
+        border-radius: 10px; 
+        padding: 8px 12px; 
+      }
+
+      /* Buttons hierarchy */
+      button { transition: background-color .15s ease, border-color .15s ease, transform .02s ease; }
+      button:active { transform: translateY(1px); }
+      .btn-primary { background: var(--accent-50); border-color: var(--accent-200); color: var(--accent-600); font-weight: 600; }
+      .btn-primary:hover { background: #e0e7ff; }
+      .btn-success { background: var(--ally-50); border-color: var(--ally-200); color: var(--ally-600); font-weight: 600; }
+      .btn-success:hover { background: #d1fae5; }
+      .btn-danger { background: var(--enemy-50); border-color: var(--enemy-200); color: var(--enemy-600); font-weight: 600; }
+      .btn-danger:hover { background: #fee2e2; }
     </style>
   </head>
   <body>
-    <h1>Simulasi Diffie–Hellman</h1>
-    <div class="muted">Tampilan minimalis, dua panel: kiri parameter, kanan langkah-langkah.</div>
-    <div class="container" aria-live="polite">
+    <div class="page">
+  <h1>Simulasi Diffie–Hellman</h1>
+      <div class="container" aria-live="polite">
       <!-- Panel kiri: Parameter -->
       <section class="panel" aria-labelledby="param-title">
         <h2 id="param-title">Parameter</h2>
@@ -56,13 +104,22 @@
             </div>
           </div>
 
-          <div class="btns">
-            <button id="btnValidate">Validasi</button>
-            <button id="btnRandom">Acak a,b</button>
-            <button id="btnRandomAll">Acak semua</button>
-            <button id="btnStep">Langkah berikutnya</button>
-            <button id="btnAuto">Auto Play</button>
-            <button id="btnReset">Reset</button>
+          <div class="btn-group" role="group" aria-label="Operasi parameter">
+            <div class="group-title">Operasi</div>
+            <div class="btns btns--ops">
+              <button id="btnValidate" class="btn-success">Validasi</button>
+              <button id="btnRandom">Acak a,b</button>
+              <button id="btnRandomAll">Acak semua</button>
+            </div>
+          </div>
+
+          <div class="btn-group" role="group" aria-label="Eksekusi simulasi">
+            <div class="group-title">Eksekusi</div>
+            <div class="btns btns--play">
+              <button id="btnStep" class="btn-primary">Langkah berikutnya</button>
+              <button id="btnAuto" class="btn-success">Auto Play</button>
+              <button id="btnReset" class="btn-danger">Reset</button>
+            </div>
           </div>
 
           <div id="messages" role="status" aria-live="polite"></div>
@@ -76,7 +133,7 @@
             <div class="kv">S (Bob)   = A^b mod p = <span id="S2">?</span></div>
           </div>
 
-          <small class="muted">Catatan: Ini simulasi edukasi. Pakailah bilangan besar (prime safe) di dunia nyata.</small>
+          
         </div>
       </section>
 
@@ -88,8 +145,10 @@
         </div>
         <div id="steps" class="section" style="min-height: 260px;"></div>
       </section>
+      </div>
     </div>
 
     <script src="./app.js"></script>
+    <script src="./life-bg.js"></script>
   </body>
 </html>
