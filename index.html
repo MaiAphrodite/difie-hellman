@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Simulasi Diffie–Hellman (Minimal)</title>
+    <style>
+      :root { --gap: 16px; --border: #d0d7de; }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: var(--gap); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.45; }
+      h1 { font-size: 1.25rem; margin: 0 0 8px; }
+      h2 { font-size: 1rem; margin: 0 0 8px; }
+      small, .muted { color: #666; }
+      .container { display: grid; grid-template-columns: 320px 1fr; gap: var(--gap); align-items: start; }
+      .panel { border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: #fff; }
+      label { display: block; font-size: .9rem; margin: 10px 0 4px; }
+      input[type="text"] { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+      button { padding: 8px 10px; border: 1px solid var(--border); background: #f6f8fa; border-radius: 6px; cursor: pointer; }
+      button:disabled { opacity: .6; cursor: not-allowed; }
+      .kv { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: .95rem; }
+      .stack { display: grid; gap: 6px; }
+      .section { padding: 8px; border: 1px dashed var(--border); border-radius: 6px; background: #fafbfc; }
+      #messages { margin-top: 8px; color: #b00020; white-space: pre-wrap; }
+      #steps { white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+      .sep { height: 1px; background: var(--border); margin: 10px 0; }
+      .flex { display: flex; align-items: center; gap: 8px; }
+      .righthead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+      .pill { font-size: .75rem; padding: 2px 6px; border: 1px solid var(--border); border-radius: 999px; background: #fff; }
+      @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <h1>Simulasi Diffie–Hellman</h1>
+    <div class="muted">Tampilan minimalis, dua panel: kiri parameter, kanan langkah-langkah.</div>
+    <div class="container" aria-live="polite">
+      <!-- Panel kiri: Parameter -->
+      <section class="panel" aria-labelledby="param-title">
+        <h2 id="param-title">Parameter</h2>
+        <div class="stack">
+          <label for="p">Modulus prima p</label>
+          <input id="p" type="text" inputmode="numeric" value="23" placeholder="contoh: 23" />
+
+          <label for="g">Generator g (basis)</label>
+          <input id="g" type="text" inputmode="numeric" value="5" placeholder="contoh: 5" />
+
+          <div class="row">
+            <div>
+              <label for="a">Rahasia Alice (a)</label>
+              <input id="a" type="text" inputmode="numeric" value="6" placeholder="2 .. p-2" />
+            </div>
+            <div>
+              <label for="b">Rahasia Bob (b)</label>
+              <input id="b" type="text" inputmode="numeric" value="15" placeholder="2 .. p-2" />
+            </div>
+          </div>
+
+          <div class="btns">
+            <button id="btnValidate">Validasi</button>
+            <button id="btnRandom">Acak a,b</button>
+            <button id="btnRandomAll">Acak semua</button>
+            <button id="btnStep">Langkah berikutnya</button>
+            <button id="btnAuto">Auto Play</button>
+            <button id="btnReset">Reset</button>
+          </div>
+
+          <div id="messages" role="status" aria-live="polite"></div>
+
+          <div class="sep"></div>
+
+          <div class="section">
+            <div class="kv">A = g^a mod p = <span id="A">?</span></div>
+            <div class="kv">B = g^b mod p = <span id="B">?</span></div>
+            <div class="kv">S (Alice) = B^a mod p = <span id="S1">?</span></div>
+            <div class="kv">S (Bob)   = A^b mod p = <span id="S2">?</span></div>
+          </div>
+
+          <small class="muted">Catatan: Ini simulasi edukasi. Pakailah bilangan besar (prime safe) di dunia nyata.</small>
+        </div>
+      </section>
+
+      <!-- Panel kanan: Step-by-step -->
+      <section class="panel" aria-labelledby="steps-title">
+        <div class="righthead">
+          <h2 id="steps-title">Langkah-langkah</h2>
+          <span class="pill" id="stepIndicator">Langkah 0/9</span>
+        </div>
+        <div id="steps" class="section" style="min-height: 260px;"></div>
+      </section>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
