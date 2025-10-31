@@ -14,8 +14,10 @@
   const btnRandom = el('btnRandom');
   const btnRandomAll = el('btnRandomAll');
   const btnStep = el('btnStep');
+  const btnPrev = el('btnPrev');
   const btnAuto = el('btnAuto');
   const btnReset = el('btnReset');
+  const btnVerbose = el('btnVerbose');
   const msgBox = el('messages');
   const ABox = el('A');
   const BBox = el('B');
@@ -28,6 +30,7 @@
   const TOTAL_STEPS = 9;
   let stepIdx = 0; // 0..9 (0 = sebelum mulai)
   let timer = null; // autoplay
+  let verbose = false; // mode penjelasan rinci
 
   let p = 23n, g = 5n, a = 6n, b = 15n;
   let A = null, B = null, sAlice = null, sBob = null;
@@ -221,11 +224,21 @@
     S2Box.textContent = '?';
   }
 
+  function flash(elm) {
+    if (!elm) return;
+    elm.classList.remove('flash');
+    // force reflow to restart animation
+    void elm.offsetWidth;
+    elm.classList.add('flash');
+    setTimeout(() => elm.classList.remove('flash'), 900);
+  }
+
   function updateComputedBoxes() {
-    if (A !== null) ABox.textContent = A.toString();
-    if (B !== null) BBox.textContent = B.toString();
-    if (sAlice !== null) S1Box.textContent = sAlice.toString();
-    if (sBob !== null) S2Box.textContent = sBob.toString();
+    // Mask values according to current step index to match narrative
+    if (stepIdx >= 3 && A !== null) { ABox.textContent = A.toString(); } else { ABox.textContent = '?'; }
+    if (stepIdx >= 5 && B !== null) { BBox.textContent = B.toString(); } else { BBox.textContent = '?'; }
+    if (stepIdx >= 7 && sAlice !== null) { S1Box.textContent = sAlice.toString(); } else { S1Box.textContent = '?'; }
+    if (stepIdx >= 8 && sBob !== null) { S2Box.textContent = sBob.toString(); } else { S2Box.textContent = '?'; }
   }
 
   function setStepIndicator() {
@@ -233,35 +246,100 @@
   }
 
   function renderSteps() {
-    const lines = [];
     const pS = p.toString(), gS = g.toString(), aS = a.toString(), bS = b.toString();
 
-    if (stepIdx >= 1) lines.push(`1) Pilih parameter publik: p = ${pS}, g = ${gS}.`);
-    if (stepIdx >= 2) lines.push(`2) Alice memilih rahasia a = ${aS}.`);
-    if (stepIdx >= 3) {
-      const AA = A !== null ? A.toString() : '...';
-      lines.push(`3) Alice menghitung A = g^a mod p = ${gS}^${aS} mod ${pS} = ${AA}.`);
-    }
-    if (stepIdx >= 4) lines.push(`4) Bob memilih rahasia b = ${bS}.`);
-    if (stepIdx >= 5) {
-      const BB = B !== null ? B.toString() : '...';
-      lines.push(`5) Bob menghitung B = g^b mod p = ${gS}^${bS} mod ${pS} = ${BB}.`);
-    }
-    if (stepIdx >= 6) lines.push('6) Alice <-> Bob saling bertukar nilai publik A dan B.');
-    if (stepIdx >= 7) {
-      const S1 = sAlice !== null ? sAlice.toString() : '...';
-      lines.push(`7) Alice menghitung kunci S = B^a mod p = ${B !== null ? B.toString() : 'B'}^${aS} mod ${pS} = ${S1}.`);
-    }
-    if (stepIdx >= 8) {
-      const S2 = sBob !== null ? sBob.toString() : '...';
-      lines.push(`8) Bob menghitung kunci S = A^b mod p = ${A !== null ? A.toString() : 'A'}^${bS} mod ${pS} = ${S2}.`);
-    }
-    if (stepIdx >= 9) {
-      const ok = sAlice !== null && sBob !== null && sAlice === sBob;
-      lines.push(`9) Verifikasi: S(Alice) ${sAlice} ${ok ? '==' : '!='} S(Bob) ${sBob} ${ok ? '✅ cocok.' : '❌ tidak cocok.'}`);
-    }
+    const steps = [
+      {
+        n: 1,
+        title: 'Pilih parameter publik',
+        short: `Pilih p dan g yang diketahui publik.`,
+        long: `Kita gunakan bilangan prima p = ${pS} dan generator g = ${gS}. Keduanya boleh dilihat semua orang.`,
+        calc: `<code>p = ${pS}</code>, <code>g = ${gS}</code>`
+      },
+      {
+        n: 2,
+        title: 'Alice memilih rahasia a',
+        short: `Alice memilih angka rahasia a.`,
+        long: `Alice mengacak rahasia a = ${aS} (2 ≤ a ≤ p−2). Nilai ini tidak dibagikan.`,
+        calc: `<code>a = ${aS}</code>`
+      },
+      {
+        n: 3,
+        title: 'Alice menghitung A',
+        short: `Hitung A = g^a mod p.`,
+        long: `Alice menghitung <code>A = g^a mod p</code> lalu membagikannya ke Bob.`,
+        calc: `<code>A = ${gS}<sup>${aS}</sup> mod ${pS} = <span class="value" id="stepA">${A !== null ? A.toString() : '...'}</span></code>`
+      },
+      {
+        n: 4,
+        title: 'Bob memilih rahasia b',
+        short: `Bob memilih angka rahasia b.`,
+        long: `Bob mengacak rahasia b = ${bS} (2 ≤ b ≤ p−2). Nilai ini tidak dibagikan.`,
+        calc: `<code>b = ${bS}</code>`
+      },
+      {
+        n: 5,
+        title: 'Bob menghitung B',
+        short: `Hitung B = g^b mod p.`,
+        long: `Bob menghitung <code>B = g^b mod p</code> lalu membagikannya ke Alice.`,
+        calc: `<code>B = ${gS}<sup>${bS}</sup> mod ${pS} = <span class="value" id="stepB">${B !== null ? B.toString() : '...'}</span></code>`
+      },
+      {
+        n: 6,
+        title: 'Tukar nilai publik',
+        short: `Alice ⇄ Bob saling bertukar A dan B.`,
+        long: `Hanya nilai publik A dan B yang ditukar, rahasia a dan b tetap disimpan masing-masing.`,
+        calc: `<code>A ↔ B</code>`
+      },
+      {
+        n: 7,
+        title: 'Alice menghitung kunci S',
+        short: `S = B^a mod p.`,
+        long: `Dengan B yang diterima, Alice menghitung <code>S = B^a mod p</code>.`,
+        calc: `<code>S = ${B !== null ? B.toString() : 'B'}<sup>${aS}</sup> mod ${pS} = <span class="value" id="stepS1">${sAlice !== null ? sAlice.toString() : '...'}</span></code>`
+      },
+      {
+        n: 8,
+        title: 'Bob menghitung kunci S',
+        short: `S = A^b mod p.`,
+        long: `Dengan A yang diterima, Bob menghitung <code>S = A^b mod p</code>.`,
+        calc: `<code>S = ${A !== null ? A.toString() : 'A'}<sup>${bS}</sup> mod ${pS} = <span class="value" id="stepS2">${sBob !== null ? sBob.toString() : '...'}</span></code>`
+      },
+      {
+        n: 9,
+        title: 'Verifikasi kunci bersama',
+        short: `Bandingkan S milik Alice dan Bob.`,
+        long: `Nilai kunci harus sama. Jika sama, pertukaran kunci berhasil.`,
+        calc: (() => {
+          const ok = sAlice !== null && sBob !== null && sAlice === sBob;
+          const sa = sAlice !== null ? sAlice.toString() : '...?';
+          const sb = sBob !== null ? sBob.toString() : '...?';
+          const res = ok ? '✅ cocok' : '❌ tidak cocok';
+          return `<code>S(Alice) = ${sa}</code> dan <code>S(Bob) = ${sb}</code> → <span class="value">${res}</span>`;
+        })()
+      }
+    ];
 
-    stepsBox.textContent = lines.join('\n');
+    const html = [
+      '<div class="steps">',
+      ...steps.slice(0, stepIdx).map((st, idx) => {
+        const stateClass = (idx+1 === stepIdx) ? 'step step--active' : 'step step--done';
+        const title = st.title;
+        const desc = verbose ? st.long : st.short;
+        return `
+          <div class="${stateClass}">
+            <div class="step-num">${st.n}</div>
+            <div class="step-content">
+              <div class="step-title">${title}</div>
+              <div class="step-body">${desc}</div>
+              <div class="calc" style="margin-top:6px">${st.calc}</div>
+            </div>
+          </div>`;
+      }),
+      '</div>'
+    ].join('');
+
+    stepsBox.innerHTML = html;
     setStepIndicator();
   }
 
@@ -277,25 +355,36 @@
         break;
       case 3: // hitung A
         A = modPow(g, a, p);
+        flash(ABox);
         break;
       case 4: // pilih b
         break;
       case 5: // hitung B
         B = modPow(g, b, p);
+        flash(BBox);
         break;
       case 6: // tukar A,B
         break;
       case 7: // Alice hitung S
         if (B === null) B = modPow(g, b, p);
         sAlice = modPow(B, a, p);
+        flash(S1Box);
         break;
       case 8: // Bob hitung S
         if (A === null) A = modPow(g, a, p);
         sBob = modPow(A, b, p);
+        flash(S2Box);
         break;
       case 9: // verifikasi
         break;
     }
+    updateComputedBoxes();
+    renderSteps();
+  }
+
+  function prevStep() {
+    if (stepIdx <= 0) return;
+    stepIdx--;
     updateComputedBoxes();
     renderSteps();
   }
@@ -315,6 +404,7 @@
     if (timer) return; // already running
     btnAuto.textContent = 'Hentikan Auto';
     btnStep.disabled = true;
+    btnPrev.disabled = true;
     btnRandom.disabled = true;
     btnValidate.disabled = true;
     timer = setInterval(() => {
@@ -328,6 +418,7 @@
     timer = null;
     btnAuto.textContent = 'Auto Play';
     btnStep.disabled = false;
+    btnPrev.disabled = false;
     btnRandom.disabled = false;
     btnValidate.disabled = false;
   }
@@ -380,13 +471,42 @@
   btnRandom.addEventListener('click', randomizeSecrets);
   btnRandomAll.addEventListener('click', randomizeAll);
   btnStep.addEventListener('click', nextStep);
+  btnPrev.addEventListener('click', prevStep);
   btnAuto.addEventListener('click', toggleAuto);
   btnReset.addEventListener('click', resetAll);
+  btnVerbose.addEventListener('click', () => {
+    verbose = !verbose;
+    btnVerbose.textContent = verbose ? 'Mode Ringkas' : 'Mode Rinci';
+    renderSteps();
+  });
 
   // If user edits inputs, stop autoplay and clear computed
   for (const inp of [pInput, gInput, aInput, bInput]) {
     inp.addEventListener('input', () => { stopAuto(); clearComputed(); stepIdx = 0; setStepIndicator(); stepsBox.textContent = ''; setMessage(''); });
   }
+
+  // Copy mini buttons (delegated)
+  document.addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('.copy-mini');
+    if (!btn) return;
+    const targetId = btn.getAttribute('data-copy-target');
+    if (!targetId) return;
+    const span = el(targetId);
+    const text = span && span.textContent ? span.textContent.trim() : '';
+    if (!text || text === '?') { setMessage('Tidak ada nilai untuk disalin.'); return; }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+      }
+      setMessage(`Disalin: ${text}`);
+    } catch (e) {
+      setMessage('Gagal menyalin ke clipboard.');
+    }
+  });
 
   // Init from defaults
   validateParams(false);

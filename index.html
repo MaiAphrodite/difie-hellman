@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Simulasi Diffie–Hellman (Minimal)</title>
-    <style>
+  <style>
       :root { --gap: 16px; --border: #d0d7de; }
       /* Theme colors aligned with GoL palette */
       :root {
@@ -23,7 +23,7 @@
       h1 { font-size: 1.25rem; margin: 0 0 8px; }
       h2 { font-size: 1rem; margin: 0 0 8px; }
       small, .muted { color: #666; }
-  .container { display: grid; grid-template-columns: 320px 1fr; gap: var(--gap); align-items: start; }
+  .container { display: grid; grid-template-columns: 320px 1fr; gap: var(--gap); align-items: stretch; }
   .page { max-width: 1100px; margin: 0 auto; display: grid; gap: 12px; }
       .panel { border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: #fff; }
   /* prettier cards and clearer hierarchy */
@@ -77,6 +77,68 @@
       .btn-success:hover { background: #d1fae5; }
       .btn-danger { background: var(--enemy-50); border-color: var(--enemy-200); color: var(--enemy-600); font-weight: 600; }
       .btn-danger:hover { background: #fee2e2; }
+
+  /* Stepper styles */
+      .steps { display: grid; gap: 10px; }
+      .step { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; padding: 8px; border: 1px dashed var(--border); border-radius: 8px; background: #fff; }
+      .step-num { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 999px; font-weight: 700; border: 1px solid var(--accent-200); background: var(--accent-50); color: var(--accent-600); }
+      .step--done .step-num { background: var(--ally-50); border-color: var(--ally-200); color: var(--ally-600); }
+      .step--active { box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+      .step-title { font-weight: 700; margin: 0 0 4px; }
+      .step-body { color: #333; }
+      .calc code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; background: #f6f8fa; padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border); }
+      .value { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; padding: 2px 6px; border-radius: 6px; background: #eef2ff; border: 1px solid #c7d2fe; color: #3730a3; }
+      .copy-mini { font-size: .75rem; padding: 2px 6px; border-radius: 999px; background: #f6f8fa; border: 1px solid var(--border); cursor: pointer; }
+      .inline-actions { display: inline-flex; gap: 6px; align-items: center; margin-left: 6px; }
+
+      /* Flash animation when values update */
+      @keyframes flash {
+        0% { box-shadow: 0 0 0 0 rgba(99,102,241,0.35); }
+        100% { box-shadow: 0 0 0 14px rgba(99,102,241,0); }
+      }
+      .flash { animation: flash .8s ease-out; }
+
+      /* Steps panel as a grid to allow internal scroll area */
+      #stepsPanel { display: grid; grid-template-rows: auto 1fr; min-height: 0; }
+      #steps { overflow-y: auto; min-height: 0; max-height: none; }
+
+      /* Generic panel internal scroll helpers */
+      .panel--scroll { display: grid; grid-template-rows: auto 1fr; max-height: 72vh; min-height: 0; }
+      .panel--scroll > .scrollable { overflow-y: auto; min-height: 0; }
+
+      @media (max-width: 900px) {
+        .panel--scroll { max-height: none; }
+        .panel--scroll > .scrollable { overflow: visible; }
+      }
+
+      /* Pretty scrollbars (WebKit + Firefox) */
+      #steps,
+      .panel--scroll > .scrollable {
+        /* Firefox */
+        scrollbar-width: thin;
+        scrollbar-color: var(--accent-200) transparent;
+        /* Avoid layout shift when scrollbar appears */
+        scrollbar-gutter: stable both-edges;
+        /* Keep scroll contained */
+        overscroll-behavior: contain;
+      }
+      /* WebKit browsers (Chrome/Edge/Safari/Opera) */
+      #steps::-webkit-scrollbar,
+      .panel--scroll > .scrollable::-webkit-scrollbar { width: 10px; height: 10px; }
+      #steps::-webkit-scrollbar-track,
+      .panel--scroll > .scrollable::-webkit-scrollbar-track { background: transparent; }
+      #steps::-webkit-scrollbar-thumb,
+      .panel--scroll > .scrollable::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, var(--accent-200), #d9e0ff);
+        border-radius: 8px;
+        border: 2px solid rgba(255,255,255,0.7); /* creates a padded look on light bg */
+      }
+      #steps::-webkit-scrollbar-thumb:hover,
+      .panel--scroll > .scrollable::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, #c0caff, var(--accent-200));
+      }
+      #steps::-webkit-scrollbar-corner,
+      .panel--scroll > .scrollable::-webkit-scrollbar-corner { background: transparent; }
     </style>
   </head>
   <body>
@@ -84,9 +146,9 @@
   <h1>Simulasi Diffie–Hellman</h1>
       <div class="container" aria-live="polite">
       <!-- Panel kiri: Parameter -->
-      <section class="panel" aria-labelledby="param-title">
+      <section class="panel panel--scroll" aria-labelledby="param-title">
         <h2 id="param-title">Parameter</h2>
-        <div class="stack">
+        <div class="stack scrollable">
           <label for="p">Modulus prima p</label>
           <input id="p" type="text" inputmode="numeric" value="23" placeholder="contoh: 23" />
 
@@ -116,9 +178,17 @@
           <div class="btn-group" role="group" aria-label="Eksekusi simulasi">
             <div class="group-title">Eksekusi</div>
             <div class="btns btns--play">
+              <button id="btnPrev">Langkah sebelumnya</button>
               <button id="btnStep" class="btn-primary">Langkah berikutnya</button>
               <button id="btnAuto" class="btn-success">Auto Play</button>
               <button id="btnReset" class="btn-danger">Reset</button>
+            </div>
+          </div>
+
+          <div class="btn-group" role="group" aria-label="Mode tampilan">
+            <div class="group-title">Tampilan</div>
+            <div class="btns">
+              <button id="btnVerbose">Mode Rinci</button>
             </div>
           </div>
 
@@ -127,10 +197,10 @@
           <div class="sep"></div>
 
           <div class="section">
-            <div class="kv">A = g^a mod p = <span id="A">?</span></div>
-            <div class="kv">B = g^b mod p = <span id="B">?</span></div>
-            <div class="kv">S (Alice) = B^a mod p = <span id="S1">?</span></div>
-            <div class="kv">S (Bob)   = A^b mod p = <span id="S2">?</span></div>
+            <div class="kv">A = g^a mod p = <span id="A">?</span> <span class="inline-actions"><button class="copy-mini" data-copy-target="A">Salin</button></span></div>
+            <div class="kv">B = g^b mod p = <span id="B">?</span> <span class="inline-actions"><button class="copy-mini" data-copy-target="B">Salin</button></span></div>
+            <div class="kv">S (Alice) = B^a mod p = <span id="S1">?</span> <span class="inline-actions"><button class="copy-mini" data-copy-target="S1">Salin</button></span></div>
+            <div class="kv">S (Bob)   = A^b mod p = <span id="S2">?</span> <span class="inline-actions"><button class="copy-mini" data-copy-target="S2">Salin</button></span></div>
           </div>
 
           
@@ -138,7 +208,7 @@
       </section>
 
       <!-- Panel kanan: Step-by-step -->
-      <section class="panel" aria-labelledby="steps-title">
+      <section class="panel panel--scroll" aria-labelledby="steps-title" id="stepsPanel">
         <div class="righthead">
           <h2 id="steps-title">Langkah-langkah</h2>
           <span class="pill" id="stepIndicator">Langkah 0/9</span>

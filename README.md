@@ -6,7 +6,10 @@ Web sederhana untuk memperlihatkan langkah-langkah pertukaran kunci Diffie–Hel
 - Dua panel: kiri untuk parameter (p, g, a, b), kanan untuk langkah-langkah.
 - Validasi dasar: p prima (Miller–Rabin deterministik 64-bit), 2 ≤ a,b ≤ p−2, 2 ≤ g ≤ p−1.
 - Perhitungan menggunakan BigInt: A = g^a mod p, B = g^b mod p, S = B^a mod p = A^b mod p.
-- Tombol: Validasi, Acak a/b, Langkah berikutnya, Auto Play, Reset.
+- Stepper interaktif dengan highlight langkah aktif dan ringkasan/perhitungan per langkah.
+- Mode Rinci/Ringkas untuk penjelasan (toggle "Mode Rinci").
+- Tombol salin nilai di A/B/S untuk memudahkan copy ke clipboard.
+- Tombol navigasi "Langkah sebelumnya" dan "Langkah berikutnya", plus Auto Play dan Reset.
 
 ### Bonus: Latar belakang Conway's Game of Life
 - Kanvas animasi halus di latar (tidak mengganggu interaksi) dengan pola "engineered" seperti Gosper glider gun, Pulsar, Glider, LWSS/MWSS/HWSS, R-pentomino, Acorn.
@@ -41,8 +44,8 @@ python -m http.server 8000
 ## Cara Pakai
 1. Isi/ubah parameter di panel kiri: p (prima), g, a (Alice), b (Bob).
 2. Klik "Validasi" untuk memeriksa parameter.
-3. Klik "Langkah berikutnya" berulang untuk melihat proses, atau gunakan "Auto Play".
-4. Nilai A, B, dan kunci bersama S akan muncul saat langkah terkait tercapai.
+3. Gunakan "Langkah berikutnya"/"Langkah sebelumnya" untuk menavigasi, atau aktifkan "Auto Play".
+4. Nilai A, B, dan kunci S hanya ditampilkan saat mencapai langkah terkait (disembunyikan sebelumnya agar narasi konsisten). Anda bisa menyalin nilai dengan tombol "Salin".
 5. "Reset" mengembalikan tampilan ke awal (parameter tidak diubah kecuali Anda ubah sendiri).
 
 ## Catatan
